@@ -1,7 +1,7 @@
 Package: pubcrawler2hotspots
 Title: Scripts to Aggregate PubCrawler Output to the Hotspots Grid
 Version: 0.0.0.9000
-Authors@R: Toph Allen <toph.allen@gmail.com> [aut,cre]
+Authors: Toph Allen <toph.allen@gmail.com> [aut,cre]
 Description: PubCrawler exports CSVs. Hotspots has a template grid. We aggregate them.
 Depends: R (>= 3.3.1)
 License: None
