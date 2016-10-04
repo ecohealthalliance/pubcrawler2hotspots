@@ -28,4 +28,4 @@ locations <- foreach(d = datadirs, .combine = rbind) %dopar% {
   bind_csvs(d)
 }
 
-save(locations, file = "data/locations.RData")
+save(locations, file = "cache/locations.RData")
