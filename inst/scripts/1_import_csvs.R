@@ -24,8 +24,12 @@ datadirs <- file.path(datadir, list.files(datadir))
 
 datadirs
 
-locations <- foreach(d = datadirs, .combine = rbind) %dopar% {
+locations_list <- foreach(d = datadirs) %dopar% {
   bind_csvs(d)
 }
 
+locations <- bind_rows(locations_list)
+
 save(locations, file = "cache/locations.RData")
+save(locations_list, file = "cache/locations_list.RData")
+
