@@ -1,10 +1,19 @@
 library(raster)
 library(dplyr)
 library(readr)
+library(purrr)
 
 if (interactive()) load_all()
 
 load("cache/locations.RData")
+
+blocklist <- list.files("data-raw/blocklists", full.names = TRUE) %>%
+  map(read_csv, col_types = "cc") %>%
+  reduce(rbind)
+blocklist2 <- c("American River", "Candida", "Research", "Centre", "Sigma", "Normal",
+                "Middle", "Tukey", "The World", "Golgi", "Male", "Horizontal", "Teaching
+                Hospital", "Cancer", "Altogether", "Delta", "Excel", "Chicken", "Basic",
+                "Scheme")
 
 # Methods of weighting
 # w1a: Uniform
@@ -15,6 +24,8 @@ load("cache/locations.RData")
 # w4: Population * count
 
 weighted <- locations %>%
+  filter(!(geonameid %in% blocklist$geonameid)) %>%
+  filter(!(name %in% blocklist2)) %>%
   group_by(article_id) %>%
   mutate(pop_nonzero = if_else(population == 0, 0, 1),
          w1a = 1 / n(),
@@ -40,10 +51,6 @@ by_geonameid <- weighted %>%
             w4 = sum(w4)) %>%
   ungroup()
 
-# A lot of the top Geonames matches are in fact countries. We'll remove these.
-# Actually, we should remove them at the prior stage.
-countryInfo <- read_tsv("http://download.geonames.org/export/dump/countryInfo.txt",
-                        comment = "#")
 
 
 by_lonlat <- by_geonameid %>%
@@ -58,6 +65,20 @@ by_lonlat <- by_geonameid %>%
             w3 = sum(w3),
             w4 = sum(w4))
 
+
+by_lonlat_hires <- by_geonameid %>%
+  mutate(lon = round(longitude * 2) / 2,
+         lat = round(latitude * 2) / 2) %>%
+  group_by(lon, lat) %>%
+  summarize(count = sum(count),
+            w1a = sum(w1a),
+            w1b = sum(w1b),
+            w2a = sum(w2a),
+            w2b = sum(w2b),
+            w3 = sum(w3),
+            w4 = sum(w4))
+
+
 # Make SpatialPointsDataFrame
 
 by_geonameid_sp <- select(by_geonameid, -geonameid, -name)
@@ -66,7 +87,22 @@ coordinates(by_geonameid_sp) <- c("longitude", "latitude")
 proj4string(by_geonameid_sp) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
 load("cache/template_raster.RData")
-lonlat_raster <- rasterize(x = by_geonameid_sp, y = template_raster, fun = sum, mask = FALSE)
+hs_raster <- rasterize(x = by_geonameid_sp, y = template_raster, fun = sum, background = 0)
+hs_raster <- mask(hs_raster, template_raster)
+raster_plot(hs_raster$w1a, bg_color = "grey50")
+raster_plot(hs_raster$w4, bg_color = "grey50")
+raster_plot(quantvar(hs_raster$w1a), bg_color = "grey50")
+raster_plot(quantvar(hs_raster$w4), bg_color = "grey50")
 
 
-winsorize(lonlat_raster$w4)
+hires_raster <- rasterize(x = by_geonameid_sp, y = raster(resolution = 1/4), fun = sum)
+raster_plot(hires_raster$w1a, bg_color = "grey50")
+raster_plot(hires_raster$w4, bg_color = "grey50")
+raster_plot(quantvar(hires_raster$w1a), bg_color = "grey50")
+raster_plot(quantvar(hires_raster$w4), bg_color = "grey50")
+
+writeRaster(hs_raster, "cache/hs_raster.grd", overwrite = TRUE)
+writeRaster(hires_raster, "cache/hires_raster.grd", overwrite = TRUE)
+
+
+foo = brick("cache/hs_raster.grd")

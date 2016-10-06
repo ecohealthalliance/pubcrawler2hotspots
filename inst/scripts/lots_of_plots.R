@@ -23,18 +23,6 @@ quickmap(by_lonlat, winsorize(w3))
 quickmap(by_lonlat, winsorize(w4))
 
 
-by_lonlat_hires <- by_geonameid %>%
-  mutate(lon = round(longitude * 2) / 2,
-         lat = round(latitude * 2) / 2) %>%
-  group_by(lon, lat) %>%
-  summarize(count = sum(count),
-            w1a = sum(w1a),
-            w1b = sum(w1b),
-            w2a = sum(w2a),
-            w2b = sum(w2b),
-            w3 = sum(w3),
-            w4 = sum(w4))
-
 
 
 
@@ -64,3 +52,17 @@ quickmap(by_lonlat_hires, winsorize(w4, 100))
 
 library(GGally)
 ggpairs(by_lonlat_hires[c(-1, -2)])
+
+raster_plot(lonlat_raster$w1a, bg_color = "grey50")
+raster_plot(hires_raster, bg_color = "grey50")
+
+
+
+
+
+
+
+
+
+
+
