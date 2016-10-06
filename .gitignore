@@ -35,3 +35,7 @@ vignettes/*.pdf
 
 # Raw data directory, as it's rather large
 /data-raw/
+
+# Output directory, for now.
+/out/
+/inst/out/
