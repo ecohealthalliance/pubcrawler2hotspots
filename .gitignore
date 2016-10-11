@@ -37,7 +37,7 @@ vignettes/*.pdf
 /data-raw/
 
 # Data directory, for now
-/data/
+# /data/
 
 # Output directory, for now.
 /out/
