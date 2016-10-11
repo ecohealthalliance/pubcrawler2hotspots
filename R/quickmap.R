@@ -1,5 +1,17 @@
 # Functions related to plotting.
 
+theme_nothing <- function(base_size = 12, base_family = "Helvetica")
+{
+  theme_bw(base_size = base_size, base_family = base_family) %+replace%
+    theme(
+      rect             = element_blank(),
+      line             = element_blank(),
+      text             = element_blank(),
+      # legend.position = "none"
+      # axis.ticks = element_text
+    )
+}
+
 nolegend <- function() {
   require(ggplot2)
   theme(legend.position = "none")
@@ -24,9 +36,10 @@ spectral <- function(numcolors) {
   rev(colorRampPalette(brewer.pal(11, "Spectral"))(numcolors))
 }
 
-quickmap <- function(data, fill, geom = "raster", limits = NULL, plot_factor = FALSE, pal_fun = "spectral", ...) {
+quickmap <- function(data, fill, geom = "raster", limits = NULL, plot_factor = FALSE, pal_fun = "viridis", ...) {
   require(ggplot2)
   require(RColorBrewer)
+  require(viridis)
   
   arglist <- as.list(match.call())
   

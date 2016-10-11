@@ -1,5 +1,5 @@
-library(raster)
 library(dplyr)
+library(raster)
 library(readr)
 library(purrr)
 
@@ -101,8 +101,9 @@ raster_plot(hires_raster$w4, bg_color = "grey50")
 raster_plot(quantvar(hires_raster$w1a), bg_color = "grey50")
 raster_plot(quantvar(hires_raster$w4), bg_color = "grey50")
 
-writeRaster(hs_raster, "cache/hs_raster.grd", overwrite = TRUE)
-writeRaster(hires_raster, "cache/hires_raster.grd", overwrite = TRUE)
+writeRaster(hs_raster, "cache/pubs_hs", overwrite = TRUE)
+writeRaster(hires_raster, "cache/pubs_hires", overwrite = TRUE)
 
-
-foo = brick("cache/hs_raster.grd")
+pubs_df <- as.data.frame(hs_raster, xy = TRUE) %>%
+  rename(lon = x, lat = y)
+save(pubs_df, file = "data/pubs_df.RData")
