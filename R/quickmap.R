@@ -169,14 +169,16 @@ quantvar <- function(x) {
   return(quantvar)
 }
 
-winsorize <- function (x, multiple = 3) {
-  if (length(multiple) != 1 || multiple <= 0) {
-    stop("bad value for 'multiple'")
-  }
-  med <- median(x, na.rm = TRUE)
-  y <- x - med # Center so that median = 0
-  sc <- mad(y, center=0, na.rm = TRUE) * multiple # Create scaled cutoff
-  y[y > sc] <- sc # Remove values outside the scaled cutoff
-  y[y < -sc] <- -sc
-  y + med # De-center and return data.
+
+# This compares two layers using the winsorization function.
+comparemap <- function(data, new, old, prob = 0.5, multiple = 100) {
+  arglist <- as.list(match.call())
+
+  quickmap_call <- list()
+  quickmap_call[[1]] <- substitute(quickmap)
+  quickmap_call$data <- arglist$data
+  quickmap_call$fill <- substitute(winsorize((new / sum(new, na.rm = TRUE)) - (old / sum(old, na.rm = TRUE)), prob = prob, multiple = multiple))
+  quickmap_call$pal_fun = "RdYlBu"
+  quickmap_call <- as.call(quickmap_call)
+  eval(quickmap_call) + nolegend()
 }
