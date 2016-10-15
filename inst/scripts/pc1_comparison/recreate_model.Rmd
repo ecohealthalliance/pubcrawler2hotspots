@@ -1,0 +1,364 @@
+
+```{r load}
+load_all()
+
+library(dismo)
+library(gbm)
+library(dplyr)
+
+load(file = "inst/scripts/pc1_comparison/old_pubs_model.RData")
+```
+
+
+
+```{r old-model}
+d.old <- d3.1
+
+f.old <- new_pubs_round ~ pop + crop + past + pop_change + crop_change + past_change + mamdiv + urban_land
+x.old <- which(colnames(d.old) %in% all.vars(f.old[[3]]))
+y.old <- which(colnames(d.old) %in% all.vars(f.old[[2]]))
+
+# Let's see if refitting it now gives the same thing
+m.old <- gbm.step(data = d.old, gbm.x = x.old, gbm.y = y.old,
+                  family = "poisson",
+                  tree.complexity = 3,
+                  learning.rate = 0.01,
+                  n.trees = 50)
+
+
+summary(m.old)
+i.old <- gbm.interactions(m.old)
+i.old[[1]]
+i.old[[2]]
+gbm.plot(m.old)
+
+summary(m3.4)
+i3.4 <- gbm.interactions(m3.4)
+i3.4[[1]]
+i3.4[[2]]
+gbm.plot(m3.4)
+
+p.old <- p3.4
+p.old$predict.link <- predict.gbm(m.old, newdata = p.old, n.trees = m.old$n.trees, type = "link")
+p.old$predict.response <- predict.gbm(m.old, newdata = p.old, n.trees = m3.4$n.trees, type = "response")
+
+```
+
+
+## Here, we have the new publication layer.
+
+First, we'll create a data frame with the new predictors included.
+
+```{r old-model-with-new-pubs}
+data(pubs_df)
+
+d.new <- d.old %>%
+    left_join(pubs_df)
+
+head(d.new)
+quickmap(d.new, new_pubs)
+quickmap(d.new, new_pubs_round)
+quickmap(d.new, count)
+quickmap(d.new, w1a)
+quickmap(d.new, w1b)
+quickmap(d.new, w2a)
+quickmap(d.new, w2b)
+quickmap(d.new, w3)
+quickmap(d.new, w4)
+
+quickmap(d.new, quantvar(new_pubs)) + nolegend()
+quickmap(d.new, quantvar(new_pubs_round)) + nolegend()
+quickmap(d.new, quantvar(count)) + nolegend()
+quickmap(d.new, quantvar(w1a)) + nolegend()
+quickmap(d.new, quantvar(w1b)) + nolegend()
+quickmap(d.new, quantvar(w2a)) + nolegend()
+quickmap(d.new, quantvar(w2b)) + nolegend()
+quickmap(d.new, quantvar(w3)) + nolegend()
+quickmap(d.new, quantvar(w4)) + nolegend()
+
+quickmap(d.new, log(new_pubs)) + nolegend()
+quickmap(d.new, log(new_pubs_round)) + nolegend()
+quickmap(d.new, log(count)) + nolegend()
+quickmap(d.new, log(w1a)) + nolegend()
+quickmap(d.new, log(w1b)) + nolegend()
+quickmap(d.new, log(w2a)) + nolegend()
+quickmap(d.new, log(w2b)) + nolegend()
+quickmap(d.new, log(w3)) + nolegend()
+quickmap(d.new, log(w4)) + nolegend()
+
+
+# We can compare the relative distributions here. Where "new" is higher, red; where "old" is higher, blue.
+RdYlBu <- function(n) rev(colorRampPalette(brewer.pal(11, "RdYlBu"))(n))
+
+comparemap(d.new, count, new_pubs, multiple = 1000)
+comparemap(d.new, w1a, new_pubs, prob = 0.6, multiple = 50)
+comparemap(d.new, w1b, new_pubs, prob = 0.6, multiple = 50)
+comparemap(d.new, w2a, new_pubs, prob = 0.6, multiple = 50)
+comparemap(d.new, w2b, new_pubs, prob = 0.6, multiple = 50)
+comparemap(d.new, w3, new_pubs, prob = 0.6, multiple = 500)
+comparemap(d.new, w4, new_pubs, prob = 0.6, multiple = 500)
+
+comparemap(d.new, w1b, w1a, prob = 0.6, multiple = 50)
+comparemap(d.new, w2b, w1b, prob = 0.7, multiple = 50)
+comparemap(d.new, w2b, w2a, prob = 0.6, multiple = 50)
+
+a <- d.new$w1a / sum(d.new$w1a) - d.new$new_pubs / sum(d.new$new_pubs)
+b <- d.new$w1b / sum(d.new$w1b) - d.new$new_pubs / sum(d.new$new_pubs)
+
+summary(a)
+summary(b)
+
+winsorize(a)
+winsorize(b, prob = 0.6)
+
+        n2 <- n%/%2 + as.integer(high)
+        sort(abs(x - center), partial = n2)[n2]
+    }
+    else median(abs(x - center))
+
+
+
+```
+
+
+```{r run-models}
+
+# For this step, we round.
+
+d.new[, 16:21] <- round(d.new[, 16:21], digits = 0)
+
+f.new <- count ~ pop + crop + past + pop_change + crop_change + past_change + mamdiv + urban_land
+x.new <- which(colnames(d.new) %in% all.vars(f.new[[3]]))
+y.w1a <- which(colnames(d.new) %in% "w1a")
+
+# Let's see if refitting it now gives the same thing
+m.w1a <- gbm.step(data = d.new, gbm.x = x.new, gbm.y = y.w1a,
+                  family = "poisson",
+                  tree.complexity = 3,
+                  learning.rate = 0.01,
+                  n.trees = 50)
+
+
+y.w1b <- which(colnames(d.new) %in% "w1b")
+
+# Let's see if refitting it now gives the same thing
+m.w1b <- gbm.step(data = d.new, gbm.x = x.new, gbm.y = y.w1b,
+                  family = "poisson",
+                  tree.complexity = 3,
+                  learning.rate = 0.01,
+                  n.trees = 50)
+
+
+y.w2a <- which(colnames(d.new) %in% "w2a")
+
+# Let's see if refitting it now gives the same thing
+m.w2a <- gbm.step(data = d.new, gbm.x = x.new, gbm.y = y.w2a,
+                  family = "poisson",
+                  tree.complexity = 3,
+                  learning.rate = 0.01,
+                  n.trees = 50)
+
+
+y.w2b <- which(colnames(d.new) %in% "w2b")
+
+# Let's see if refitting it now gives the same thing
+m.w2b <- gbm.step(data = d.new, gbm.x = x.new, gbm.y = y.w2b,
+                  family = "poisson",
+                  tree.complexity = 3,
+                  learning.rate = 0.01,
+                  n.trees = 50)
+
+
+y.w3 <- which(colnames(d.new) %in% "w3")
+
+# Let's see if refitting it now gives the same thing
+m.w3 <- gbm.step(data = d.new, gbm.x = x.new, gbm.y = y.w3,
+                  family = "poisson",
+                  tree.complexity = 3,
+                  learning.rate = 0.01,
+                  n.trees = 50)
+
+
+y.w4 <- which(colnames(d.new) %in% "w4")
+
+# Let's see if refitting it now gives the same thing
+m.w4 <- gbm.step(data = d.new, gbm.x = x.new, gbm.y = y.w4,
+                  family = "poisson",
+                  tree.complexity = 3,
+                  learning.rate = 0.01,
+                  n.trees = 50)
+
+
+y.count <- which(colnames(d.new) %in% "count")
+
+# Let's see if refitting it now gives the same thing
+m.count <- gbm.step(data = d.new, gbm.x = x.new, gbm.y = y.count,
+                  family = "poisson",
+                  tree.complexity = 3,
+                  learning.rate = 0.01,
+                  n.trees = 50)
+
+
+summary(m.old)
+i.old <- gbm.interactions(m.old)
+i.old[[1]]
+i.old[[2]]
+gbm.plot(m.old)
+
+summary(m3.4)
+i3.4 <- gbm.interactions(m3.4)
+i3.4[[1]]
+i3.4[[2]]
+gbm.plot(m3.4)
+
+p.old <- p3.4
+p.old$predict.link <- predict.gbm(m.old, newdata = p.old, n.trees = m.old$n.trees, type = "link")
+p.old$predict.response <- predict.gbm(m.old, newdata = p.old, n.trees = m3.4$n.trees, type = "response")
+
+```
+
+```{r summarize-models}
+summary(m.old)
+summary(m.w1a)
+summary(m.w1b)
+summary(m.w2a)
+summary(m.w2b)
+summary(m.w3)
+summary(m.w4)
+summary(m.count)
+
+gbm.interactions(m.old)
+gbm.interactions(m.w1a)
+gbm.interactions(m.w1b)
+gbm.interactions(m.w2a)
+gbm.interactions(m.w2b)
+gbm.interactions(m.w3)
+gbm.interactions(m.w4)
+gbm.interactions(m.count)
+
+gbm.plot(m.old)
+gbm.plot(m.w1a)
+gbm.plot(m.w1b)
+gbm.plot(m.w2a)
+gbm.plot(m.w2b)
+gbm.plot(m.w3)
+gbm.plot(m.w4)
+gbm.plot(m.count)
+
+p.new <- p3.4
+
+p.new$old.link <- predict.gbm(m.old, newdata = p.new, n.trees = m.old$n.trees, type = "link")
+p.new$w1a.link <- predict.gbm(m.w1a, newdata = p.new, n.trees = m.w1a$n.trees, type = "link")
+p.new$w1b.link <- predict.gbm(m.w1b, newdata = p.new, n.trees = m.w1b$n.trees, type = "link")
+p.new$w2a.link <- predict.gbm(m.w2a, newdata = p.new, n.trees = m.w2a$n.trees, type = "link")
+p.new$w2b.link <- predict.gbm(m.w2b, newdata = p.new, n.trees = m.w2b$n.trees, type = "link")
+p.new$w3.link <- predict.gbm(m.w3, newdata = p.new, n.trees = m.w3$n.trees, type = "link")
+p.new$w4.link <- predict.gbm(m.w4, newdata = p.new, n.trees = m.w4$n.trees, type = "link")
+p.new$count.link <- predict.gbm(m.count, newdata = p.new, n.trees = m.count$n.trees, type = "link")
+
+p.new$old.response <- predict.gbm(m.old, newdata = p.new, n.trees = m.old$n.trees, type = "response")
+p.new$w1a.response <- predict.gbm(m.w1a, newdata = p.new, n.trees = m.w1a$n.trees, type = "response")
+p.new$w1b.response <- predict.gbm(m.w1b, newdata = p.new, n.trees = m.w1b$n.trees, type = "response")
+p.new$w2a.response <- predict.gbm(m.w2a, newdata = p.new, n.trees = m.w2a$n.trees, type = "response")
+p.new$w2b.response <- predict.gbm(m.w2b, newdata = p.new, n.trees = m.w2b$n.trees, type = "response")
+p.new$w3.response <- predict.gbm(m.w3, newdata = p.new, n.trees = m.w3$n.trees, type = "response")
+p.new$w4.response <- predict.gbm(m.w4, newdata = p.new, n.trees = m.w4$n.trees, type = "response")
+p.new$count.response <- predict.gbm(m.count, newdata = p.new, n.trees = m.count$n.trees, type = "response")
+
+quickmap(p.new, old.link) + nolegend()
+quickmap(p.new, count.link) + nolegend()
+quickmap(p.new, w1a.link) + nolegend()
+quickmap(p.new, w1b.link) + nolegend()
+quickmap(p.new, w2a.link) + nolegend()
+quickmap(p.new, w2b.link) + nolegend()
+quickmap(p.new, w3.link) + nolegend()
+quickmap(p.new, w4.link) + nolegend()
+
+quickmap(p.new, old.response) + nolegend()
+quickmap(p.new, count.response) + nolegend()
+quickmap(p.new, w1a.response) + nolegend()
+quickmap(p.new, w1b.response) + nolegend()
+quickmap(p.new, w2a.response) + nolegend()
+quickmap(p.new, w2b.response) + nolegend()
+quickmap(p.new, w3.response) + nolegend()
+quickmap(p.new, w4.response) + nolegend()
+
+quickmap(p.new, quantvar(old.response)) + nolegend()
+quickmap(p.new, quantvar(count.response)) + nolegend()
+quickmap(p.new, quantvar(w1a.response)) + nolegend()
+quickmap(p.new, quantvar(w1b.response)) + nolegend()
+quickmap(p.new, quantvar(w2a.response)) + nolegend()
+quickmap(p.new, quantvar(w2b.response)) + nolegend()
+quickmap(p.new, quantvar(w3.response)) + nolegend()
+quickmap(p.new, quantvar(w4.response)) + nolegend()
+
+```
+
+```{r correlation-plots}
+library(GGally)
+d.new %>% select(new_pubs,
+                 count,
+                 w1a,
+                 w1b,
+                 w2a,
+                 w2b,
+                 w3,
+                 w4) %>%
+  ggcorr(label = TRUE)
+
+d.new %>% select(new_pubs,
+                 count,
+                 w1a,
+                 w1b,
+                 w2a,
+                 w2b,
+                 w3,
+                 w4) %>%
+  ggcorr(method = c("everything", "spearman"), label = TRUE)
+
+d.new %>% select(new_pubs,
+                 count,
+                 w1a,
+                 w1b,
+                 w2a,
+                 w2b,
+                 w3,
+                 w4) %>%
+  ggpairs()
+
+
+
+
+d.new %>% select(new_pubs,
+                 count,
+                 w1a,
+                 w1b,
+                 w2a,
+                 w2b,
+                 w3,
+                 w4) %>%
+  mutate_each(funs(log(. + 1))) %>%
+  ggcorr(label = TRUE)
+
+d.new %>% select(new_pubs,
+                 count,
+                 w1a,
+                 w1b,
+                 w2a,
+                 w2b,
+                 w3,
+                 w4) %>%
+  mutate_each(funs(log(. + 1))) %>%
+  ggpairs()
+
+```
+
+I am saving some layers to test this stuff. Like, I'll use 
+
+```{r save-test-layers}
+pubs_df_all <- p.new %>%
+  select(gridid, lon, lat, old.response, count.response, w1a.response, w1b.response, w2a.response, w2b.response, w3.response, w4.response) 
+
+save(pubs_df_all, file = "data/pubs_df_all.RData") 
+
+```
