@@ -1,58 +1,5 @@
 # Functions related to plotting.
 
-theme_nothing <- function(base_size = 12, base_family = "Helvetica")
-{
-  theme_bw(base_size = base_size, base_family = base_family) %+replace%
-    theme(
-      rect = element_blank(),
-      line = element_blank(),
-      text = element_blank(),
-      legend.position = "none"
-      # axis.ticks = element_text
-    )
-}
-
-nolines <- function(base_size = 12, base_family = "Helvetica")
-{
-  theme_bw(base_size = base_size, base_family = base_family) %+replace%
-    theme(
-      rect = element_blank(),
-      line = element_blank()
-      # text = element_blank()
-      # legend.position = "none"
-      # axis.ticks = element_text
-    )
-}
-
-notext <- function() {
-  require(ggplot2)
-  labs(x=NULL, y=NULL)
-}
-
-notext <- function() {
-  require(ggplot2)
-  theme(text = element_blank())
-}
-
-notitle <- function() {
-  require(ggplot2)
-  labs(title=NULL)
-}
-
-nolegend <- function() {
-  require(ggplot2)
-  theme(legend.position = "none")
-}
-
-simple_legend <- function() {
-  guides(fill = guide_colorbar(title = element_blank(), label = FALSE))
-}
-
-# spectral <- rev(colorRampPalette(brewer.pal(11, "Spectral"))(100))
-spectral <- function(numcolors) {
-  rev(colorRampPalette(brewer.pal(11, "Spectral"))(numcolors))
-}
-
 quickmap <- function(data, fill, geom = "raster", limits = NULL, plot_factor = FALSE, pal_fun = "viridis", ...) {
   require(ggplot2)
   require(RColorBrewer)
@@ -104,6 +51,59 @@ quickmap <- function(data, fill, geom = "raster", limits = NULL, plot_factor = F
   }
 
   return(quickmap)
+}
+
+theme_nothing <- function(base_size = 12, base_family = "Helvetica")
+{
+  theme_bw(base_size = base_size, base_family = base_family) %+replace%
+    theme(
+      rect = element_blank(),
+      line = element_blank(),
+      text = element_blank(),
+      legend.position = "none"
+      # axis.ticks = element_text
+    )
+}
+
+nolines <- function(base_size = 12, base_family = "Helvetica")
+{
+  theme_bw(base_size = base_size, base_family = base_family) %+replace%
+    theme(
+      rect = element_blank(),
+      line = element_blank()
+      # text = element_blank()
+      # legend.position = "none"
+      # axis.ticks = element_text
+    )
+}
+
+notext <- function() {
+  require(ggplot2)
+  labs(x=NULL, y=NULL)
+}
+
+notext <- function() {
+  require(ggplot2)
+  theme(text = element_blank())
+}
+
+notitle <- function() {
+  require(ggplot2)
+  labs(title=NULL)
+}
+
+nolegend <- function() {
+  require(ggplot2)
+  theme(legend.position = "none")
+}
+
+simple_legend <- function() {
+  guides(fill = guide_colorbar(title = element_blank(), label = FALSE))
+}
+
+# spectral <- rev(colorRampPalette(brewer.pal(11, "Spectral"))(100))
+spectral <- function(numcolors) {
+  rev(colorRampPalette(brewer.pal(11, "Spectral"))(numcolors))
 }
 
 quickglobe <- function(fill, data, geom = "tile", limits = NULL, plot_factor = FALSE, orientation = c(-90, 0, 0), ...) {
@@ -167,18 +167,4 @@ quantvar <- function(x) {
     quantvar <- cut(x, breaks = breaks, include.lowest = TRUE, labels = FALSE)
   }
   return(quantvar)
-}
-
-
-# This compares two layers using the winsorization function.
-comparemap <- function(data, new, old, prob = 0.5, multiple = 100) {
-  arglist <- as.list(match.call())
-
-  quickmap_call <- list()
-  quickmap_call[[1]] <- substitute(quickmap)
-  quickmap_call$data <- arglist$data
-  quickmap_call$fill <- substitute(winsorize((new / sum(new, na.rm = TRUE)) - (old / sum(old, na.rm = TRUE)), prob = prob, multiple = multiple))
-  quickmap_call$pal_fun = "RdYlBu"
-  quickmap_call <- as.call(quickmap_call)
-  eval(quickmap_call) + nolegend()
 }
