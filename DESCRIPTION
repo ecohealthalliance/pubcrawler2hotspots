@@ -7,3 +7,9 @@ Depends: R (>= 3.3.1)
 License: None
 Encoding: UTF-8
 LazyData: true
+Requires:
+    plyr
+    raster
+    gbm
+    dismo
+    dplyr
