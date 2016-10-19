@@ -1,4 +1,5 @@
-library(pubcrawler2hotspots)
+# library(pubcrawler2hotspots)
+load_all() 
 
 library(dismo)
 library(ggplot2)
@@ -13,7 +14,7 @@ predicted <- predictors %>%
 # We'll be fitting a model to w1b.
 
 
-f1 <- w1b ~ pop + dalys + health_exp + gdp + acc_50k + diseases
+f1 <- w1b ~ pop + dalys + health_exp + gdp + acc_50k + diseases_dist
 gbm_data <- as.data.frame(inner_join(predictors,
                                      select(pubs_df, lon, lat, w1b)))
 # We do this here because we only want to na.omit for the variables of interest.
@@ -51,28 +52,12 @@ quickmap(predicted, l1$residuals)
 
 
 
-# Second model: integrating urban land measures. Two new models; one for old, one for new.
-data(predictors_old)
-
-predictors <- predictors_old %>%
-  select(gridid, lon, lat, urban_land) %>%
-  right_join(predictors)
-
-data(hotspots_drivers)
-
-predictors <- hotspots_drivers %>%
-  select(gridid, earth9_urban) %>%
-  right_join(predictors)
-
-predicted <- predictors %>%
-  select(which(!names(predictors) %in% names(predicted)), gridid) %>%
-  right_join(predicted)
 
 
 
 # Model two, with the old urban_land var.
 
-f2 <- w1b ~ pop + dalys + health_exp + gdp + acc_50k + diseases + urban_land
+f2 <- w1b ~ pop + dalys + health_exp + gdp + acc_50k + diseases_dist + urban_land
 gbm_data <- as.data.frame(inner_join(predictors,
                                      select(pubs_df, lon, lat, w1b)))
 # We do this here because we only want to na.omit for the variables of interest.
@@ -115,7 +100,7 @@ quickmap(predicted, l2$residuals)
 # Trying with the new urban land variable, since it might be better and more
 # consistent to use it than to use the old measure.
 
-f3 <- w1b ~ pop + dalys + health_exp + gdp + acc_50k + diseases + earth9_urban
+f3 <- w1b ~ pop + dalys + health_exp + gdp + acc_50k + diseases_dist + earth9_urban
 gbm_data <- as.data.frame(inner_join(predictors,
                                      select(pubs_df, lon, lat, w1b)))
 # We do this here because we only want to na.omit for the variables of interest.
@@ -130,7 +115,7 @@ gbm_data[y_var] <- round(gbm_data[y_var]) # For Poisson.
 
 m3 <- gbm.step(gbm_data, x_vars, y_var,
                tree.complexity = 3,
-               learning.rate = 0.01,
+               learning.rate = 0.025,
                bag.fraction = 0.75, 
                n.trees = 50,
                family = "poisson")
@@ -166,13 +151,144 @@ quickmap(predicted, m3.response - m2.response)
 
 
 
+# One last try, with diseases as flat. I might use this, only because it means
+# I don't have to explain why I distributed diseases by population. But I like
+# the other model better.
+
+f4 <- w1b ~ pop + dalys + health_exp + gdp + acc_50k + diseases + earth9_urban
+gbm_data <- as.data.frame(inner_join(predictors,
+                                     select(pubs_df, lon, lat, w1b)))
+# We do this here because we only want to na.omit for the variables of interest.
+gbm_data <- gbm_data[, which(colnames(gbm_data) %in% c(all.vars(f4)))]
+gbm_data <- na.omit(gbm_data)
+
+x_vars <- which(colnames(gbm_data) %in% all.vars(f4[[3]]))
+y_var <- which(colnames(gbm_data) %in% all.vars(f4[[2]]))
+
+gbm_data[y_var] <- round(gbm_data[y_var]) # For Poisson.
+# With the above settings, the holdout deviance never really increases.
+
+m4 <- gbm.step(gbm_data, x_vars, y_var,
+               tree.complexity = 3,
+               learning.rate = 0.025,
+               bag.fraction = 0.75, 
+               n.trees = 50,
+               family = "poisson")
+summary(m4)
+gbm.plot(m4)
+
+# Huh, this urban variable is much more correlated. That's what I would have expected.
+
+predicted$m4.response <- predict(m4, predicted, m4$n.trees, type = "response")
+predicted$m4.link <- predict(m4, predicted, m4$n.trees, type = "link")
+quickmap(predicted, m4.response)
+quickmap(predicted, m4.link)
+
+# Compare to a model fit from old vars, and other models
+qplot(m3.response, m4.response, data = predicted)
+# This is interesting. There are only a few grid cells that are quite a lot
+# different. The urban land measure seems to correlate to a few highly-matched
+# grid cells.
+
+qplot(m3.link, m4.link, data = predicted)
 
 
 
-# Previously we had tree complexity 3. We should do that.
+qplot(log(w1b.response), m4.link, data = predicted)
+l4 <- lm(m4.link ~ log(w1b.response), data = predicted)
+summary(l4)
+quickmap(predicted, l4$residuals)
+l4 <- lm(m4.link ~ m3.link, data = predicted)
+summary(l4)
+quickmap(predicted, l4$residuals)
+quickmap(predicted, m4.link - m3.link)
+quickmap(predicted, m4.response - m3.response)
 
+
+
+
+# Per Kris's suggestion, one really final try with no diseases
+
+# One last try, with diseases as flat. I might use this, only because it means
+# I don't have to explain why I distributed diseases by population. But I like
+# the other model better.
+
+f5 <- w1b ~ pop + dalys + health_exp + gdp + acc_50k + earth9_urban
+gbm_data <- as.data.frame(inner_join(predictors,
+                                     select(pubs_df, lon, lat, w1b)))
+# We do this here because we only want to na.omit for the variables of interest.
+gbm_data <- gbm_data[, which(colnames(gbm_data) %in% c(all.vars(f5)))]
+gbm_data <- na.omit(gbm_data)
+
+x_vars <- which(colnames(gbm_data) %in% all.vars(f5[[3]]))
+y_var <- which(colnames(gbm_data) %in% all.vars(f5[[2]]))
+
+gbm_data[y_var] <- round(gbm_data[y_var]) # For Poisson.
+# With the above settings, the holdout deviance never really increases.
+
+m5 <- gbm.step(gbm_data, x_vars, y_var,
+               tree.complexity = 3,
+               learning.rate = 0.025,
+               bag.fraction = 0.75, 
+               n.trees = 50,
+               family = "poisson")
+summary(m5)
+gbm.plot(m5)
+
+# Huh, this urban variable is much more correlated. That's what I would have expected.
+
+predicted$m5.response <- predict(m5, predicted, m5$n.trees, type = "response")
+predicted$m5.link <- predict(m5, predicted, m5$n.trees, type = "link")
+quickmap(predicted, m5.response)
+quickmap(predicted, m5.link)
+
+# Compare to a model fit from old vars, and other models
+qplot(m4.response, m5.response, data = predicted)
+# This is interesting. There are only a few grid cells that are quite a lot
+# different. The urban land measure seems to correlate to a few highly-matched
+# grid cells.
+
+qplot(m4.link, m5.link, data = predicted)
+
+
+
+qplot(log(w1b.response), m5.link, data = predicted)
+l5 <- lm(m5.link ~ log(w1b.response), data = predicted)
+summary(l5)
+quickmap(predicted, l5$residuals)
+l5 <- lm(m5.link ~ m4.link, data = predicted)
+summary(l5)
+quickmap(predicted, l5$residuals)
+quickmap(predicted, m5.link - m4.link)
+quickmap(predicted, m5.response - m4.response)
+
+
+
+# I guess I'd better compare our candidates to the actual outcome data.
+names(predicted)
+
+
+predicted <- left_join(predicted, select(pubs_df, lon, lat, w1b))
+qplot(log(w1b), m5.link, data = predicted)
+p5 <- glm(w1b ~ m5.link, data = predicted, family = "poisson")
+summary(p5)
+# McFadden's Pseudo R^2 is 0.7296462
+1 - p5$deviance / p5$null.deviance
+quickmap(predicted, p5$residuals)
+quickmap(predicted, w1b - m5.response)
+quickmap(predicted, log(w1b) - log(m5.response))
+
+qplot(log(log(w1b)), m5.link, data = predicted)
+p5 <- glm(w1b ~ m5.link, data = predicted, family = "poisson")
+summary(p5)
+
+quickmap(predicted, p5$residuals)
+quickmap(predicted, log(w1b) - log(m5.response))
+
+qplot(w1b - m4.response, w1b - m5.response, data = predicted)
+qplot(log(w1b) - log(m4.response), log(w1b) - log(m5.response), data = predicted)
 
 pubs_fit <- predicted %>%
-  select(gridid, lon, lat, pubs_fit = m3.response)
+  select(gridid, lon, lat, pubs_fit = m5.response)
 
 save(pubs_fit, file = "data/pubs_fit.RData")
