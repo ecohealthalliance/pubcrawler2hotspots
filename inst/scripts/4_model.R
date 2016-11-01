@@ -235,6 +235,10 @@ m5 <- gbm.step(gbm_data, x_vars, y_var,
 summary(m5)
 gbm.plot(m5)
 
+pubs_model <- m5
+save(pubs_model, file = "data/pubs_model.RData")
+data(pubs_model)
+m5 <- pubs_model
 # Huh, this urban variable is much more correlated. That's what I would have expected.
 
 predicted$m5.response <- predict(m5, predicted, m5$n.trees, type = "response")
@@ -292,3 +296,4 @@ pubs_fit <- predicted %>%
   select(gridid, lon, lat, pubs_fit = m5.response)
 
 save(pubs_fit, file = "data/pubs_fit.RData")
+

@@ -1,3 +1,5 @@
+load_all()
+
 library(dplyr)
 library(raster)
 library(readr)
@@ -78,6 +80,34 @@ by_lonlat_hires <- by_geonameid %>%
             w3 = sum(w3),
             w4 = sum(w4))
 
+
+pubs_hires <- by_geonameid %>%
+  mutate(lon = round(longitude * 2) / 2,
+         lat = round(latitude * 2) / 2) %>%
+  group_by(lon, lat) %>%
+  summarize(count = sum(count),
+            w1a = sum(w1a),
+            w1b = sum(w1b),
+            w2a = sum(w2a),
+            w2b = sum(w2b),
+            w3 = sum(w3),
+            w4 = sum(w4))
+
+
+pubs_superhires <- by_geonameid %>%
+  mutate(lon = round(longitude * 4) / 4,
+         lat = round(latitude * 4) / 4) %>%
+  group_by(lon, lat) %>%
+  summarize(count = sum(count),
+            w1a = sum(w1a),
+            w1b = sum(w1b),
+            w2a = sum(w2a),
+            w2b = sum(w2b),
+            w3 = sum(w3),
+            w4 = sum(w4))
+
+save(pubs_hires, file = "data/pubs_hires.RData")
+save(pubs_superhires, file = "data/pubs_superhires.RData")
 
 # Make SpatialPointsDataFrame
 

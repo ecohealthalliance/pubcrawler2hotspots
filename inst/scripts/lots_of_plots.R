@@ -1,3 +1,12 @@
+load_all()
+
+library(ggplot2)
+
+pubs <- raster("cache/pubs_hires")
+
+
+
+
 quickmap(by_lonlat, count)
 quickmap(by_lonlat, w1a)
 quickmap(by_lonlat, w1b)
