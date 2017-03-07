@@ -10,13 +10,13 @@ data(predictors)
 data(pubs_df)
 data(pubs_df_all)
 predicted <- predictors %>%
-  left_join(select(pubs_df_all, gridid, lon, lat, w1b.response))
+  left_join(dplyr::select(pubs_df_all, gridid, lon, lat, w1b.response))
 
 # The code below generates the final model we use in the paper.
 
 f5 <- w1b ~ pop + dalys + health_exp + gdp + acc_50k + earth9_urban
 gbm_data <- as.data.frame(inner_join(predictors,
-                                     select(pubs_df, lon, lat, w1b)))
+                                     dplyr::select(pubs_df, lon, lat, w1b)))
 # We do this here because we only want to na.omit for the variables of interest.
 gbm_data <- gbm_data[, which(colnames(gbm_data) %in% c(all.vars(f5)))]
 gbm_data <- na.omit(gbm_data)
@@ -33,6 +33,16 @@ m5 <- pubs_model
 #########################################################
 # Look at the distribution to check for overdispersion. #
 #########################################################
+
+
+# Look for overdispersion in w1b.
+pubs <- na.omit(pubs_df$w1b)
+mean(pubs) # 7.46
+var(pubs) # 4919.211
+
+mean(pubs_fit$pubs_fit) # 7.9
+var(pubs_fit$pubs_fit) # 3232.2
+
 
 # There *are* lots of zeroes.
 ggplot(gbm_data, aes(x = w1b)) +
@@ -68,6 +78,8 @@ zinb1 <- zeroinfl(w1b ~ pop + dalys + health_exp + gdp + acc_50k + earth9_urban 
 
 # Complex inflation
 
+zip1 <- zeroinfl(w1b ~ pop + dalys + health_exp + gdp + acc_50k + earth9_urban | geonames,
+                 data = model_df)
 
 
 ##############################
@@ -97,7 +109,17 @@ qp3 <- glm(pubs ~ pop + dalys + health_exp + gdp + acc_50k + earth9_urban + offs
 zip1 <- zeroinfl(pubs ~ pop + dalys + health_exp + gdp + acc_50k + earth9_urban | geonames,
                  data = model_df)
 
+zip1
 
+
+# If you run the predict function of qp1 on predicted then plot this, it shows
+# how far off qp1 is from w1b.response. In other words, in this case, the more
+# flexible modeling framework of the boosted regression tree better recreates
+# the overdispersed surface presented by the aggregated publication mention
+# data.
+qplot(w1b.response, exp(qp1), data = predicted)
+mean(exp(predict(qp1)))
+var(exp(predict(qp1)))
 
 
 
@@ -125,14 +147,24 @@ m6 <- gbm.step(gbm_data, x_vars, y_var,
 summary(m6)
 gbm.plot(m6)
 
-pubs_model <- m6
+# What's interesting here is that the geonames variable isn't a strong predictor
+# in the BRT model. This implies that what we're seeing ISN'T just bias caused
+# by the distribution of GeoNames.
 
-# Huh, this urban variable is much more correlated. That's what I would have expected.
+predicted <- left_join(predicted, geonames_df)
 
 predicted$m6.response <- predict(m6, predicted, m6$n.trees, type = "response")
 predicted$m6.link <- predict(m6, predicted, m6$n.trees, type = "link")
 quickmap(predicted, m6.response)
 quickmap(predicted, m6.link)
+
+data(pubs_fit)
+predicted <- left_join(predicted, pubs_fit)
+
+qplot(pubs_fit, m6.response, data = predicted)
+summary(lm(m6.response ~ pubs_fit, data = predicted))
+# Adjusted R2 is 99.13.
+# N.B. Using it as an offset doesn't work.
 
 # Compare to a model fit from old vars, and other models
 qplot(m4.response, m6.response, data = predicted)
